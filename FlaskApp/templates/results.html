@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>جدول المذاكرة للفيديوهات</title>
+    <style>
+        .total-duration-box {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 15px;
+            background-color:  #EEF1FF;
+            border: 5px solid #7695FF;
+            border-radius: 10px;
+            font-size: 18px;
+            color: #333;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .checkbox-large {
+            width: 20px;
+            height: 20px;
+            transform: scale(1.5);
+            margin: 5px;
+        }
+        .pomodoro-container {
+            margin-bottom: 20px;
+            padding: 20px;
+            background-color: #EEF1FF;
+            border: 2px solid #007bff;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 300px;
+            margin: auto;
+            display: flex;
+            padding-inline: 21rem;
+            align-content: flex-end;
+            justify-content: center;
+            flex-direction: column;
+
+        }
+        .div
+        {
+            display: flex;
+            gap: 4rem;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .pomodoro-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .pomodoro-timer, .break-timer {
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .pomodoro-timer {
+            color: #28a745;
+        }
+        .break-timer {
+            color: #dc3545;
+        }
+        .pomodoro-buttons
+        {
+         display: flex;
+        gap: 1rem;
+        justify-content: center;
+        align-items: center;
+        }
+        .pomodoro-buttons button {
+            width: 100px;
+            margin: 5px;
+            font-size: 18px;
+            border-radius: 5px;
+            padding-inline: 2rem;
+        }
+        .btn-start {
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+        .btn-reset {
+            background-color: #dc3545;
+            border-color: #dc3545;
+        }
+        .timer-settings {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .timer-settings input {
+            width: 60px;
+            text-align: center;
+        }
+        .nav 
+        {
+        background-color:#AAC4FF;
+        padding-bottom: 11px;
+        position: fixed;
+        width: 100%;
+        margin-top: -3rem;
+        z-index: 999999;
+        }
+        .col
+        {
+      
+    margin-top: 26rem;
+        }
+     .mb-4{
+        text-align: center;
+    }
+
+    </style>
+    <script>
+        let pomodoroTimer;
+        let breakTimer;
+        let workMinutes = 25; 
+        let breakMinutes = 5;  
+        let timeLeftWork;
+        let timeLeftBreak;
+        let isRunning = false;
+
+        function updateTimerDisplay() {
+            const timerDisplay = document.getElementById('pomodoro-timer');
+            const breakDisplay = document.getElementById('break-timer');
+            
+            const workMins = Math.floor(timeLeftWork / 60);
+            const workSecs = timeLeftWork % 60;
+            const breakMins = Math.floor(timeLeftBreak / 60);
+            const breakSecs = timeLeftBreak % 60;
+            
+            timerDisplay.textContent = `${workMins}:${workSecs < 10 ? '0' + workSecs : workSecs}`;
+            breakDisplay.textContent = `${breakMins}:${breakSecs < 10 ? '0' + breakSecs : breakSecs}`;
+        }
+
+        function startPomodoro() {
+            if (!isRunning) {
+                isRunning = true;
+                workMinutes = parseInt(document.getElementById('work-time').value);
+                breakMinutes = parseInt(document.getElementById('break-time').value);
+                timeLeftWork = workMinutes * 60; 
+                timeLeftBreak = breakMinutes * 60; 
+                updateTimerDisplay();
+                pomodoroTimer = setInterval(updateWorkTimer, 1000);
+            }
+        }
+
+        function updateWorkTimer() {
+            if (timeLeftWork > 0) {
+                timeLeftWork--;
+                updateTimerDisplay();
+            } else {
+                clearInterval(pomodoroTimer);
+                alert('انتهت الجلسة! حان وقت الراحة.');
+                playNotificationSound();
+                startBreakTimer();
+            }
+        }
+
+        function startBreakTimer() {
+            breakTimer = setInterval(updateBreakTimer, 1000);
+        }
+
+        function updateBreakTimer() {
+            if (timeLeftBreak > 0) {
+                timeLeftBreak--;
+                updateTimerDisplay();
+            } else {
+                clearInterval(breakTimer);
+                alert('انتهت فترة الراحة! ابدأ المذاكرة.');
+                playNotificationSound();
+                resetPomodoro();
+            }
+        }
+
+        function resetPomodoro() {
+            clearInterval(pomodoroTimer);
+            clearInterval(breakTimer);
+            timeLeftWork = workMinutes * 60;
+            timeLeftBreak = breakMinutes * 60; 
+            isRunning = false;
+            updateTimerDisplay();
+        }
+
+        function playNotificationSound() {
+            const audio = new Audio('/static/notification.mp3');
+            audio.play();
+        }
+
+        function openVideo(path) {
+            fetch('/open_video', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: new URLSearchParams({ 'video_path': path })
+            }).then(response => {
+                if (response.ok) {
+                    console.log('تم فتح الفيديو بنجاح.');
+                } else {
+                    console.error('حدث خطأ أثناء محاولة فتح الفيديو.');
+                }
+            }).catch(error => console.error('خطأ في الاتصال بالخادم:', error));
+        }
+
+        function updateProgress(videoId, percentage) {
+            const progressBar = document.getElementById('progress-bar-' + videoId);
+            const roundedPercentage = parseFloat(percentage).toFixed(2); 
+            progressBar.style.width = roundedPercentage + '%';
+            progressBar.innerText = roundedPercentage + '%';
+
+            if (percentage <= 40) {
+                progressBar.className = 'progress-bar bg-danger';
+            } else if (percentage > 40 && percentage <= 60) {
+                progressBar.className = 'progress-bar bg-warning text-dark';
+            } else {
+                progressBar.className = 'progress-bar bg-success';
+            }
+        }
+
+        function calculateOverallProgress() {
+            const checkboxes = document.querySelectorAll('.progress-checkbox');
+            const totalVideos = checkboxes.length;
+            let completedVideos = 0;
+
+            checkboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    completedVideos++;
+                }
+            });
+
+            const percentage = (completedVideos / totalVideos) * 100;
+            updateProgress('overall', percentage);
+        }
+
+        function colorRows() {
+            const rows = document.querySelectorAll('tbody tr');
+            const colors = ['#ADD8E6', '#98FB98', '#FFFFE0', '#FFB6C1', '#FFDAC1', '#E6E6FA', '#B0E0E6', '#D3D3D3'];
+            let colorMap = new Map();
+            let currentColorIndex = 0;
+
+            rows.forEach(row => {
+                const dayCell = row.cells[0].innerText.trim();
+                const dateCell = row.cells[1].innerText.trim();
+                const key = dayCell + '-' + dateCell;
+
+                if (!colorMap.has(key)) {
+                    colorMap.set(key, colors[currentColorIndex]);
+                    currentColorIndex = (currentColorIndex + 1) % colors.length;
+                }
+
+                row.style.backgroundColor = colorMap.get(key);
+            });
+        }
+
+        function filterByCategory() {
+            const selectedCategory = document.getElementById('category-filter').value;
+            const rows = document.querySelectorAll('tbody tr');
+
+            rows.forEach(row => {
+                const categoryCell = row.cells[4].querySelector('select').value;
+                if (selectedCategory === 'all' || categoryCell === selectedCategory) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        window.onload = function() {
+            colorRows();
+            document.getElementById('category-filter').addEventListener('change', filterByCategory);
+        };
+    </script>
+</head>
+<body >
+    <div class="nav d-block">
+        <div class="total-duration-box">
+            <strong>المدة الإجمالية:</strong> {{ total_duration }}
+        </div>
+
+        <!-- مؤقت بومودورو -->
+        <div class="pomodoro-container">
+            <div class="timer-settings">
+                <label>المذاكرة: <input type="number" id="work-time" value="25" min="1"></label>
+                <label>الراحة: <input type="number" id="break-time" value="5" min="1"></label>
+            </div>
+          <div class="div">
+            <p id="pomodoro-timer" class="pomodoro-timer">25:00</p>
+            <p id="break-timer" class="break-timer">5:00</p>
+          </div>
+            <div class="pomodoro-buttons">
+                <button onclick="startPomodoro()" class="btn btn-start text-white">ابدأ</button>
+                <button onclick="resetPomodoro()" class="btn btn-reset text-white">إعادة تعيين</button>
+            </div>
+        </div>
+        
+<br>
+        <h1 class="mb-4">جدول المذاكرة للفيديوهات</h1>
+        
+        <!-- تصنيف الفيديوهات حسب الموضوع أو المستوى -->
+        <div class="w-50 mx-auto" >
+        <div class="d-flex justify-content-center">
+            <label for="category-filter" class="fw-bold fs-5"  > اخترالتصنيف</label>
+        </div>
+            <select id="category-filter" class="form-select">
+                <option value="all">الكل</option>
+                <option value="completed">تم المذاكرة</option>
+                <option value="review">مراجعة</option>
+                <option value="not_studied">لم تتم المذاكرة</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col">
+                <table class="table table-striped table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>اليوم</th>
+                            <th>التاريخ</th>
+                            <th>اسم الفيديو</th>
+                            <th>المدة</th>
+                            <th>التصنيف</th>
+                            <th>التقدم</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for video in schedule %}
+                        <tr>
+                            <td>{{ video.day_name }}</td>
+                            <td>{{ video.date }}</td>
+                            <td>{{ video.name }}</td>
+                            <td>{{ video.duration }}</td>
+                            <td>
+                                <select class="form-select" onchange="filterByCategory()">
+                                    <option value="not_studied" {% if video.category == 'not_studied' %}selected{% endif %}>لم تتم المذاكرة</option>
+                                    <option value="review" {% if video.category == 'review' %}selected{% endif %}>مراجعة</option>
+                                    <option value="completed" {% if video.category == 'completed' %}selected{% endif %}>تم المذاكرة</option>
+                                </select>
+                            </td>
+                            <td>
+                                <input type="checkbox" class="progress-checkbox checkbox-large" onchange="calculateOverallProgress()" />
+                            </td>
+                            <td>
+                                <button onclick="openVideo('{{ video.path | replace('\\', '\\\\') }}')" class="btn btn-primary">افتح الفيديو</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <div class="progress-container mb-4">
+                    <div id="progress-bar-overall" class="progress-bar bg-danger" style="width: 0%;">0%</div>
+                </div>
+
+                <div class="text-center">
+                    <form method="post" action="/download_excel">
+                        <button type="submit" class="btn btn-info">تنزيل الجدول كملف Excel</button>
+                    </form>
+                    <a href="/" class="btn btn-secondary mt-3">الرجوع للصفحة الرئيسية</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
